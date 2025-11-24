@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Get Eleven Solitaire</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Arial Black', Arial, sans-serif;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8C8 100%);
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Game Container - Fits Everything on Screen */
+        .game-container {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            height: 100vh;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 5px;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: linear-gradient(to bottom, #FFD700 0%, #FFA500 100%);
+            padding: 8px 15px;
+            border-radius: 10px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            margin-bottom: 5px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #333;
+        }
+
+        .stat-label {
+            font-size: 0.7em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .stat-value.warning {
+            color: #ff0000;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Play Area */
+        .play-area {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 5px;
+            overflow: hidden;
+        }
+
+        /* Left Side - Game Board */
+        .game-board {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Pyramid */
+        .pyramid {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .pyramid-row {
+            display: flex;
+            gap: 3px;
+            margin: 2px 0;
+        }
+
+        /* Cards */
+        .card {
+            width: 50px;
+            height: 70px;
+            cursor: pointer;
+            transition: all 0.15s;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .card:active {
+            transform: scale(0.95);
+        }
+
+        .card.selected {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.8);
+            border: 3px solid #FFD700;
+            z-index: 10;
+        }
+
+        .card.unavailable {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(50%);
+        }
+
+        .card.removed {
+            opacity: 0;
+            transform: scale(0) rotate(180deg);
+            pointer-events: none;
+        }
+
+        .card.available::after {
+            content: '●';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            color: #00ff00;
+            font-size: 1em;
+            text-shadow: 0 0 3px rgba(0,255,0,0.8);
+        }
+
+        /* Bottom Controls */
+        .bottom-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .deck-card {
+            width: 50px;
+            height: 70px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .deck-card:active {
+            transform: scale(0.95);
+        }
+
+        .cards-left {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 0.7em;
+            font-weight: bold;
+        }
+
+        /* Right Side - Bonus Cards */
+        .bonus-panel {
+            background: linear-gradient(to bottom, #FFD700 0%, #FFA500 100%);
+            border-radius: 10px;
+            padding: 10px;
+            width: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+        }
+
+        .bonus-title {
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .bonus-cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            flex: 1;
+        }
+
+        .bonus-card {
+            width: 50px;
+            height: 70px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            background-size: cover;
+            background-position: center;
+            transition: all 0.2s;
+            animation: bonusAppear 0.3s;
+        }
+
+        .bonus-card:active {
+            transform: scale(0.95);
+        }
+
+        .bonus-card.selected {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.8);
+            border: 3px solid #FFD700;
+        }
+
+        @keyframes bonusAppear {
+            from {
+                transform: scale(0) rotate(-180deg);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) rotate(0);
+                opacity: 1;
+            }
+        }
+
+        /* Messages */
+        .message-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message-overlay.show {
+            display: flex;
+        }
+
+        .message-box {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            max-width: 90%;
+        }
+
+        .message-box h2 {
+            font-size: 2em;
+            margin-bottom: 15px;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .message-box.game-over h2 {
+            color: #ff6b6b;
+        }
+
+        .message-box p {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            margin: 10px;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 1.5em;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 2000;
+            animation: popIn 0.3s;
+            pointer-events: none;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            border-left: 8px solid #00ff00;
+            color: #00aa00;
+        }
+
+        .notification.error {
+            border-left: 8px solid #ff0000;
+            color: #cc0000;
+        }
+
+        .notification.bonus {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: white;
+            border: none;
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            .card {
+                width: 45px;
+                height: 63px;
+            }
+
+            .deck-card, .bonus-card {
+                width: 45px;
+                height: 63px;
+            }
+
+            .stat-value {
+                font-size: 1.1em;
+            }
+
+            .bonus-panel {
+                width: 70px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                width: 38px;
+                height: 53px;
+            }
+
+            .deck-card, .bonus-card {
+                width: 38px;
+                height: 53px;
+            }
+
+            .stat-label {
+                font-size: 0.6em;
+            }
+
+            .stat-value {
+                font-size: 1em;
+            }
+
+            .top-bar {
+                padding: 5px 10px;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="stat-box">
+                <div class="stat-label">SCORE</div>
+                <div class="stat-value" id="score">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">TIME</div>
+                <div class="stat-value" id="timer">148</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">LEVEL</div>
+                <div class="stat-value" id="level">1</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">W</div>
+                <div class="stat-value" id="cardsLeft">0</div>
+            </div>
+        </div>
+
+        <!-- Main Play Area -->
+        <div class="play-area">
+            <!-- Game Board -->
+            <div class="game-board">
+                <div class="pyramid" id="pyramid"></div>
+                
+                <div class="bottom-controls">
+                    <div class="deck-card" id="deckPile" onclick="drawCard()">
+                        <div class="cards-left" id="deckCount">29</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bonus Cards Panel -->
+            <div class="bonus-panel">
+                <div class="bonus-title">BONUS</div>
+                <div class="bonus-cards-container" id="bonusCards"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Overlay -->
+    <div class="message-overlay" id="messageOverlay">
+        <div class="message-box" id="messageBox">
+            <h2 id="messageTitle">Level Complete!</h2>
+            <p id="messageText">Get ready for Level 2!</p>
+            <button class="btn" onclick="nextLevel()">Continue</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
